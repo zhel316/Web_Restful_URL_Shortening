@@ -1,6 +1,9 @@
+### Introduction
+TThis project seeks to enhance an existing URL shortener service, which maps each URL to a unique and concise identifier, by incorporating multi-user functionality. In this implementation, we split the work into two services: URL shortener service and user authentication service. We selected Nginx as our reverse proxy, serving as the central entry point for all our microservices.
+
 ### Run the code
 
-We highly recommend to run the services with Docker.
+We highly recommend running the services with Docker.
 
 #### Run inside docker
 1. Build the docker image. `# docker build -t <name> .`
