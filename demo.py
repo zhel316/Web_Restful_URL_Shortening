@@ -9,64 +9,192 @@ import urllib3
 http = urllib3.PoolManager()
 
 # server address
-addr = "http://127.0.0.1:12345"
+shortner = "http://172.17.0.2"
+auth = "http://172.17.0.2"
 
-def genURLList(n = 100000):
-    """ private functions to generate fake urls
+def testPostUsers():
+    """ return 201 or 409
     """
-    top_lvl = (".com", ".org", ".net", ".int", ".edu", ".gov", ".mil")
-    snd_lvl = (".cn", ".nl", ".eu", ".at", ".ch", ".uk", "","","","","","","","")
-    alphabet = string.ascii_letters + string.digits
-    urlbase = "https://www.{}{}{}"
-    postfix = "/{}"
-    res = []
-    for i in range(n):
-        len1 = random.randint(1, 20)
-        len2 = random.randint(0, 30)
-        dn = ''.join(random.choices(string.ascii_lowercase + string.digits, k=len1))
-        temp = urlbase.format(dn, random.choice(top_lvl), random.choice(snd_lvl))
-        if len2 > 0:
-            temp += postfix.format(''.join(random.choices(alphabet, k=len2)))
-        res.append(temp)
-    return res
+    # create user z
+    fields = {"username": "z", "password": "zzz"}
+    r = http.request("POST", auth + "/users", fields = fields)
+    assert(r.status == 201)
+    print(r.status, r.data.decode())
 
-# a list of test routines
-def testGetID(id, expected = 200):
-    r = http.request("GET", addr + "/" + id)
-    assert(r.status == expected)
-    return r
+    # create user x
+    fields = {"username": "x", "password": "xxx"}
+    r = http.request("POST", auth + "/users", fields = fields)
+    assert(r.status == 201)
+    print(r.status, r.data.decode())
 
-def testPutID(id, url, expected = 200):
-    r = http.request("PUT", addr + "/" + id, fields={'url': url})
-    assert(r.status == expected)
-    return r.data.decode()
+    # create user z again, return 409
+    fields = {"username": "z", "password": "zzz"}
+    r = http.request("POST", auth + "/users", fields = fields)
+    assert(r.status == 409)
+    print(r.status, r.data.decode())
 
-def testDeleteID(id, expected = 204):
-    r = http.request("DELETE", addr + "/" + id)
-    assert(r.status == expected)
-    return r.data.decode()
+def testPutUser():
+    """ return 200 or 403
+    """
+    fields = {"username": "z", "old-password": "zzz", "new-password": "123"}
+    r = http.request("PUT", auth + "/users", fields = fields)
+    assert(r.status == 200)
+    print(r.status, r.data.decode())
 
-def testDelete(expected = 404):
-    r = http.request("DELETE", addr)
-    assert(r.status == expected)
-    return r.data.decode()
+    # return 403
+    fields = {"username": "z", "old-password": "zzz", "new-password": "123"}
+    r = http.request("PUT", auth + "/users", fields = fields)
+    assert(r.status == 403)
+    print(r.status, r.data.decode())
 
-def testGet(expected = 200):
-    r = http.request("GET", addr)
-    assert(r.status == expected)
-    return r.data.decode()
+def testPostLogin():
+    """ return 200 or 403
+    """
+    fields = {"username": "z", "password": "zzz"}
+    r = http.request("POST", auth + "/users/login", fields = fields)
+    assert(r.status == 403)
+    print(r.status, r.data.decode())
 
-def testPost(url, expected = 200):
-     r = http.request("POST", addr, fields={'url': url})
-     assert(r.status == expected)
-     return r.data.decode()
+    # return 200
+    fields = {"username": "z", "password": "123"}
+    r = http.request("POST", auth + "/users/login", fields = fields)
+    assert(r.status == 200)
+    print(r.status, r.data.decode())
 
-def testStat(expected = 200):
-    r = http.request("GET", addr + "/" + "stat")
-    assert(r.status == expected)
-    return r.data.decode()
+def testPostUrl():
+    """ return 201, 400, 403
+    """
+    # login as z
+    fields = {"username": "z", "password": "123"}
+    r = http.request("POST", auth + "/users/login", fields = fields)
+    assert(r.status == 200)
+    #print(r.status, r.data.decode())
+    token = r.data.decode("utf-8")
 
-def main(n = 20000):
+    # we post some url, return 201
+    headers = {"Authorization": "Bearer " + token}
+    r = http.request("POST", shortner, headers = headers, fields = {"url": "https://en.wikipedia.org/wiki/URL"})
+    assert(r.status == 201)
+    print(r.status, r.data.decode())
+
+    # return 403
+    headers = {"Authorization": "Bearer " + token[:-2]}
+    r = http.request("POST", shortner, headers = headers, fields = {"url": "https://en.wikipedia.org/wiki/Linux"})
+    assert(r.status == 403)
+    print(r.status, r.data.decode())
+
+def testPutUrl():
+    """ return 200, 400, 404, 403
+    """
+    # login as z
+    fields = {"username": "z", "password": "123"}
+    r = http.request("POST", auth + "/users/login", fields = fields)
+    assert(r.status == 200)
+    #print(r.status, r.data.decode())
+    token = r.data.decode()
+
+    # put, return 201
+    headers = {"Authorization": "Bearer " + token}
+    r = http.request("PUT", shortner, headers = headers, fields = {"url": "https://en.wikipedia.org/wiki/Linux"})
+    assert(r.status == 200)
+    print(r.status, r.data.decode())
+
+    # put, return 201
+    headers = {"Authorization": "Bearer " + token[:-2]}
+    r = http.request("PUT", shortner, headers = headers, fields = {"url": "https://en.wikipedia.org/wiki/Linux"})
+    assert(r.status == 200)
+    print(r.status, r.data.decode())
+
+def testDelete():
+    """ return 204, 404, 403
+    """
+    # login as z
+    fields = {"username": "z", "password": "123"}
+    r = http.request("POST", auth + "/users/login", fields = fields)
+    assert(r.status == 200)
+    #print(r.status, r.data.decode())
+    token = r.data.decode()
+
+    # we post some url, return 201
+    headers = {"Authorization": "Bearer " + token}
+    r = http.request("POST", shortner, headers = headers, fields = {"url": "https://github.com/VlouingKloud/websysasg1"})
+    assert(r.status == 201)
+    print(r.status, r.data.decode())
+
+    short = r.data.decode()
+
+    # delete, return 204
+    headers = {"Authorization": "Bearer " + token}
+    r = http.request("DELETE", shortner + "/" + short, headers=headers)
+    assert(r.status == 204)
+
+    # return 403
+    headers = {"Authorization": "Bearer " + "z.z.z"}
+    r = http.request("DELETE", shortner + "/" + short, headers=headers)
+    assert(r.status == 403)
+    print(r.status, r.data.decode())
+
+def testPut():
+    """ return 200, 403, 404, 400
+    """
+    # login as z
+    fields = {"username": "z", "password": "123"}
+    r = http.request("POST", auth + "/users/login", fields = fields)
+    assert(r.status == 200)
+    #print(r.status, r.data.decode())
+    token = r.data.decode()
+
+    # we post some url, return 201
+    headers = {"Authorization": "Bearer " + token}
+    r = http.request("POST", shortner, headers = headers, fields = {"url": "https://github.com/VlouingKloud/websysasg1"})
+    assert(r.status == 201)
+    print(r.status, r.data.decode())
+
+    short = r.data.decode()
+
+    # put, return 200
+    headers = {"Authorization": "Bearer " + token}
+    r = http.request("PUT", shortner + "/" + short, headers=headers, fields = {"url": "https://urllib3.readthedocs.io/en/stable/"})
+    assert(r.status == 200)
+    print(r.status, r.data.decode())
+
+    headers = {"Authorization": "Bearer " + "z.z.z"}
+    r = http.request("PUT", shortner + "/" + short, headers=headers, fields = {"url": "https://urllib3.readthedocs.io/en/stable/"})
+    assert(r.status == 403)
+    print(r.status, r.data.decode())
+
+def testGet():
+    """ return 200, 403
+    """
+    # login as z
+    fields = {"username": "z", "password": "123"}
+    r = http.request("POST", auth + "/users/login", fields = fields)
+    assert(r.status == 200)
+    #print(r.status, r.data.decode())
+    token = r.data.decode()
+
+    # we post some url, return 201
+    headers = {"Authorization": "Bearer " + token}
+    r = http.request("POST", shortner, headers = headers, fields = {"url": "https://github.com"})
+    assert(r.status == 201)
+    print(r.status, r.data.decode())
+
+    # return 200
+    headers = {"Authorization": "Bearer " + token}
+    r = http.request("GET", shortner, headers=headers)
+    assert(r.status == 200)
+    print(r.status, r.data.decode())
+
+    # return 403
+    headers = {"Authorization": "Bearer " + "z.z.z"}
+    r = http.request("GET", shortner, headers=headers)
+    assert(r.status == 403)
+    print(r.status, r.data.decode())
+
+import os
+import time
+
+def main():
     # lets start with a few real URLs
     urls = ["https://en.wikipedia.org/wiki/URL",
             "https://github.com/VlouingKloud/websysasg1",
@@ -75,90 +203,12 @@ def main(n = 20000):
             "https://www.uva.nl/en",
             "https://app.diagrams.net/"]
 
-    # now lets post them to / to generate shorts
-    for url in urls:
-        res = testPost(url, 200)
-    # maybe lets print just one result?
-    print("--> The result of post {} to /".format(urls[-1]))
-    print(res)
-
-    # let's do a get /
-    res = testGet()
-    print("--> The result of get /")
-    print(res)
-
-    # time to resolve an ID
-    selectedID = random.choice(res.split())
-    url = testGetID(selectedID)
-    print("--> The result of get /{}".format(selectedID))
-    print(url.geturl())
-
-    # put time
-    url = "https://quanjude.com.cn/"
-    r = testPutID(selectedID, url)
-    print("--> The result of put /{}".format(selectedID))
-    print(r)
-
-    # resolve again?
-    url = testGetID(selectedID)
-    print("--> The result of get /{}".format(selectedID))
-    print(url.geturl())
-
-    # delete an ID
-    r = testDeleteID(selectedID)
-    print("--> The result of delete /{}".format(selectedID))
-    print(r)
-
-    # get the deleted ID
-    url = testGetID(selectedID, 404)
-    print("--> The result of get /{}".format(selectedID))
-    print(url.status)
-
-    # do some stat
-    url = testStat()
-    print("--> The result of get /stat")
-    print(url)
-
-    # uo, delete all? danger! danger! danger!
-    url = testDelete()
-    print("--> The result of delete /")
-    print(url)
-
-    # do some stat
-    url = testStat()
-    print("--> The result of get /stat")
-    print(url)
-
-    z = input("--> do something interesting?")
-    if z != "y":
-        return 0
-
-    print("generating {} urls".format(n))
-
-    urls = genURLList(n)
-
-    print("posting to /")
-    for url in urls:
-        r = http.request("POST", addr, fields={'url': url})
-
-    print("getting keys")
-
-    r = http.request("GET", addr)
-    shorts = r.data.decode().split()
-    print("Generated {} short IDs from {} URLs".format(len(shorts), n))
-
-    c = 7
-
-    print("selecting {} keys".format(c))
-    selectedID = random.choices(shorts, k = c)
-    print("they are")
-    print(selectedID)
-
-    for i in range(500):
-        r = http.request("GET", addr + "/" + random.choice(selectedID), redirect = False)
-
-    r = http.request("GET", addr + "/" + "stat/{}".format(c+ 5))
-    print(r.data.decode())
-
+    tests = [testPostUsers, testPutUser, testPostLogin, testPostUrl, testDelete, testPut, testGet]
+    for f in tests:
+        print(">>> running ", f.__name__)
+        f()
+        print(">>> okay")
+        input()
+        os.system("clear")
 
 main()

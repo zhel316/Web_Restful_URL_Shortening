@@ -1,32 +1,18 @@
-### Dependencies
-- DuckDB
-- Flask
+### Run the code
 
-### Start the service
+We highly recommend to run the services with Docker.
 
-We provide two ways to start our URL-shortner service.
+#### Run inside docker
+1. Build the docker image. `# docker build -t <name> .`
+2. Run the service. `# docker run -it <name>`
+3. Optionally, run the demo. `$ python3 demo.py`
 
-#### With Docker
+#### Run directly.
+1. Make sure all the libs have been installed.
+2. Install Nginx.
+3. Copy our conf to Nginx conf dir.
+4. Start Nginx
+5. Start Auth service. `$ cd auth && python3 main.py &`
+6. Start URL service. `$ cs urlshortner && python3 main.py &`
+7. Optionally, run the demo.
 
-1. First build the Docker image. `# docker build -t web .`
-2. Start the Docker image. `# docker run web`
-
-
-#### Run directly
-
-We highly recommend to use a virtual environment.
-
-1. First create a virtual environment. `$ python3 -m virtualenv env`
-2. Activate the environment. `$ source ./env/bin/activate`
-3. Install dependencies. `$ pip3 install duckdb Flask`
-3. Start the service. `$ python3 main.py`
-
-### Run the demo
-
-We provided a source file `demo.py` for testing and demonstracting.
-
-To run the demo:
-
-1. Change `demo.py`. Especially `addr` and number of URLs to generate
-2. Start the service
-3. Run. `python3 demo.py`
