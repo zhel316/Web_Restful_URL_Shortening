@@ -1,5 +1,5 @@
 ### Introduction
-TThis project seeks to enhance an existing URL shortener service, which maps each URL to a unique and concise identifier, by incorporating multi-user functionality. In this implementation, we split the work into two services: URL shortener service and user authentication service. We selected Nginx as our reverse proxy, serving as the central entry point for all our microservices.
+This project seeks to enhance an existing URL shortener service, which maps each URL to a unique and concise identifier, by incorporating multi-user functionality. In this implementation, we split the work into two services: URL shortener service and user authentication service. We selected Nginx as our reverse proxy, serving as the central entry point for all our microservices.
 
 ### Run the code
 
